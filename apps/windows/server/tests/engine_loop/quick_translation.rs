@@ -28,6 +28,8 @@ impl Predictor for Provider {
 }
 fn setup(mode: TranslationMode) -> (Router, Arc<Mutex<State>>) {
     let mut router = router_with(RouterConfig {
+        // 下面喂的是Ctrl+Alt组合，不能依赖宿主系统的缺省翻译键（Linux为Alt+Shift）。
+        translate_selection: KeyCombo::TRANSLATE_DEFAULT,
         quick_translation: QuickTranslationConfig {
             enabled: true,
             mode,
