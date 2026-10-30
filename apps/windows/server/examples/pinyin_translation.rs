@@ -67,20 +67,22 @@ fn main() {
             event: KeyEvent::new(0x20, Some(' '), Default::default()),
         });
         std::thread::sleep(Duration::from_millis(380));
-        let Some(ServerMessage::Update {
-            commit: Some(commit),
+        let Some(ServerMessage::CommitAt {
+            text: commit,
+            caret_utf16,
             ..
         }) = router.handle(ClientMessage::Poll { session })
         else {
-            panic!("long hold did not commit");
+            panic!("no bilingual caret commit");
         };
+        assert_eq!(caret_utf16, chinese.encode_utf16().count());
         assert_eq!(commit, format!("{chinese}\n{english}"));
         let mut up = KeyEvent::new(0x20, Some(' '), Default::default());
         up.released = true;
         router.handle(ClientMessage::Key { session, event: up });
         println!(
             "{}",
-            serde_json::json!({"pinyin":pinyin,"chinese":chinese,"english":english,"translation_ms":elapsed,"bilingual_commit":commit})
+            serde_json::json!({"pinyin":pinyin,"chinese":chinese,"english":english,"translation_ms":elapsed,"bilingual_commit":commit,"caret_utf16":caret_utf16})
         );
     }
 }

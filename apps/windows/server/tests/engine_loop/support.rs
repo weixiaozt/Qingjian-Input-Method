@@ -210,6 +210,9 @@ pub fn punct(c: char) -> KeyEvent {
 
 pub fn key_result(message: Option<ServerMessage>) -> (KeyOutcome, Option<String>, Frame) {
     match message {
+        Some(ServerMessage::CommitAt { text, frame, .. }) => {
+            (KeyOutcome::Consumed, Some(text), frame)
+        }
         Some(ServerMessage::KeyResult {
             outcome,
             commit,

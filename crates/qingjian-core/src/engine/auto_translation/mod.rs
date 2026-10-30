@@ -1,5 +1,7 @@
 //! 拼音与五笔整句候选自动英译：停键防抖、过期结果隔离及短按 / 长按空格上屏。
+mod commit;
 mod state;
+pub use commit::AutoCommit;
 
 use super::Engine;
 use crate::{Candidate, CandidateKind, Language, Prediction, Sense, Translation};
@@ -153,26 +155,35 @@ impl Engine {
         });
         if short {
             self.release_translation_space(now, hold)
+                .map(|commit| commit.text)
         } else {
             self.cancel_translation_space();
             None
         }
     }
 
-    pub fn release_translation_space(&mut self, now: Instant, hold: Duration) -> Option<String> {
+    pub fn release_translation_space(
+        &mut self,
+        now: Instant,
+        hold: Duration,
+    ) -> Option<AutoCommit> {
         let state = self.auto_translation.as_mut()?;
         let pressed = state.pressed.take()?;
         if !state.waiting && now.duration_since(pressed) < hold {
             let candidate = state.candidate.clone();
             self.clear_auto_translation();
-            return Some(self.commit(&candidate));
+            return Some(AutoCommit::plain(self.commit(&candidate)));
         }
         state.waiting = true;
         self.advance_translation_space(now, hold)
     }
 
     /// 长按到点就确认；异步译文未到时等待，失败时保留组句供中文确认。
-    pub fn advance_translation_space(&mut self, now: Instant, hold: Duration) -> Option<String> {
+    pub fn advance_translation_space(
+        &mut self,
+        now: Instant,
+        hold: Duration,
+    ) -> Option<AutoCommit> {
         if self.private {
             self.clear_auto_translation();
             return None;
@@ -194,11 +205,21 @@ impl Engine {
         if chinese.is_empty() {
             chinese = self.take_held();
         }
-        let text = format!("{chinese}\n{english}");
+        let commit = AutoCommit::bilingual(&chinese, &english);
         if let Some(last) = self.recent_commits.last_mut() {
             last.chars += 1 + english.chars().count();
             last.tail = english.chars().last();
         }
-        Some(text)
+        Some(commit)
+    }
+
+    /// 文档光标位于中文后时，退格和自动空格的上文也恢复为中文。
+    pub fn finish_auto_commit_at_chinese(&mut self, commit: &AutoCommit) {
+        if commit.caret_utf16.is_some()
+            && let Some(last) = self.recent_commits.last_mut()
+        {
+            last.chars = last.chars.saturating_sub(commit.english_chars);
+            last.tail = commit.chinese_tail;
+        }
     }
 }

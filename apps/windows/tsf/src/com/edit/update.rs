@@ -31,6 +31,8 @@ pub(crate) struct UpdateSession {
     /// 本次要落定上屏的文本。
     commit: Option<String>,
 
+    caret_utf16: Option<usize>,
+
     /// 本次组句拼音行；空串表示收起组句。
     preedit: String,
 }
@@ -50,6 +52,7 @@ impl ITfEditSession_Impl for UpdateSession_Impl {
                 ec,
                 self.commit.as_deref(),
                 &self.preedit,
+                self.caret_utf16,
             )
         }));
         match result {
@@ -75,12 +78,25 @@ pub(crate) fn request_update(
     commit: Option<String>,
     preedit: String,
 ) -> Result<()> {
+    request_update_with_caret(context, client_id, engine, shared, commit, preedit, None)
+}
+
+pub(crate) fn request_update_with_caret(
+    context: &ITfContext,
+    client_id: u32,
+    engine: SharedClient,
+    shared: Rc<Shared>,
+    commit: Option<String>,
+    preedit: String,
+    caret_utf16: Option<usize>,
+) -> Result<()> {
     let session = UpdateSession {
         context: context.clone(),
         engine,
         shared,
         commit,
         preedit,
+        caret_utf16,
     };
     request(context, client_id, session.into(), TF_ES_READWRITE)
 }

@@ -21,6 +21,8 @@ pub struct KeyResponse {
     /// 本次要立即上屏到文档的文本。
     pub commit: Option<String>,
 
+    pub caret_utf16: Option<usize>,
+
     /// 处理后的组句状态（preedit + 候选）；空帧表示收起候选窗口。
     pub frame: Frame,
 }

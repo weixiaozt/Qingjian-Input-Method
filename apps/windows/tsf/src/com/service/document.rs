@@ -5,7 +5,7 @@ use windows::Win32::UI::TextServices::ITfContext;
 use windows::core::Ref;
 
 use super::TextService_Impl;
-use crate::com::edit::{request_selection, request_update};
+use crate::com::edit::{request_selection, request_update, request_update_with_caret};
 use crate::com::log::log;
 
 impl TextService_Impl {
@@ -83,6 +83,16 @@ impl TextService_Impl {
         commit: Option<String>,
         preedit: String,
     ) {
+        self.update_document_with_caret(pic, commit, preedit, None);
+    }
+
+    pub(super) fn update_document_with_caret(
+        &self,
+        pic: Ref<ITfContext>,
+        commit: Option<String>,
+        preedit: String,
+        caret_utf16: Option<usize>,
+    ) {
         // 退到最后一个字母时帧已空但组句句柄还在，得跑一次把它收掉。
         if commit.is_none()
             && preedit.is_empty()
@@ -97,13 +107,14 @@ impl TextService_Impl {
             ));
             return;
         };
-        if let Err(error) = request_update(
+        if let Err(error) = request_update_with_caret(
             context,
             self.client_id.get(),
             self.engine.clone(),
             self.shared.clone(),
             commit,
             preedit,
+            caret_utf16,
         ) {
             log(&format!("请求组句更新失败: {error}"));
         }

@@ -1,5 +1,7 @@
 //! 将候选和空格生命周期交给 Core，复用正常组句上屏通道。
 use super::Router;
+use qingjian_core::engine::AutoCommit;
+use qingjian_platform::protocol::Frame;
 use qingjian_platform::protocol::{KeyEvent, KeyOutcome, ServerMessage, SessionId};
 use std::time::{Duration, Instant};
 
@@ -79,32 +81,55 @@ impl Router {
         Some(self.space_reply(session, None))
     }
 
-    fn space_reply(&mut self, session: SessionId, commit: Option<String>) -> ServerMessage {
+    fn space_reply(&mut self, session: SessionId, commit: Option<AutoCommit>) -> ServerMessage {
         if commit.is_some() {
             self.recompose();
         }
         self.sync_candidate_translation();
         let shown = self.self_drawn_frame();
         self.reconcile_candidates(&shown);
+        if let Some(commit) = &commit
+            && let Some(message) = self.commit_at_message(session, commit, self.current_frame())
+        {
+            return message;
+        }
         ServerMessage::KeyResult {
             session,
             outcome: KeyOutcome::Consumed,
-            commit: commit.filter(|text| !text.is_empty()),
+            commit: commit
+                .map(|commit| commit.text)
+                .filter(|text| !text.is_empty()),
             frame: self.current_frame(),
             english: None,
         }
     }
 
-    pub(super) fn advance_candidate_translation(&mut self) {
+    pub(super) fn advance_candidate_translation(&mut self) -> Option<AutoCommit> {
         self.sync_candidate_translation();
-        let Some(session) = self.focused else {
-            return;
-        };
-        if let Some(text) = self
+        self.focused?;
+        let commit = self
             .engine
-            .advance_translation_space(Instant::now(), self.translation_hold())
-        {
-            self.deliver_clicked(session, text);
+            .advance_translation_space(Instant::now(), self.translation_hold())?;
+        self.recompose();
+        Some(commit)
+    }
+
+    pub(super) fn commit_at_message(
+        &mut self,
+        session: SessionId,
+        commit: &AutoCommit,
+        frame: Frame,
+    ) -> Option<ServerMessage> {
+        if self.focused_dll_protocol() < qingjian_platform::protocol::COMMIT_CARET_SINCE {
+            return None;
         }
+        let caret_utf16 = commit.caret_utf16?;
+        self.engine.finish_auto_commit_at_chinese(commit);
+        Some(ServerMessage::CommitAt {
+            session,
+            text: commit.text.clone(),
+            caret_utf16,
+            frame,
+        })
     }
 }

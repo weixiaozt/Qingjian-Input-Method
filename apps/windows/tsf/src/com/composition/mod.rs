@@ -1,6 +1,7 @@
 //! 组句 preedit：把 Server 回的拼音行经 TSF 组句（[`ITfComposition`]）显示在文档光标处（对应 macOS 的内联 marked text）。
 //! 只放最朴素的一行拼音；富样式的拼音行在候选窗口里另画。所有写操作都在异步读写编辑会话里做（理由见 `edit_session`）。
 
+mod caret;
 mod shared;
 mod sink;
 
@@ -10,7 +11,7 @@ use std::rc::Rc;
 use windows::Win32::UI::TextServices::{
     INSERT_TEXT_AT_SELECTION_FLAGS, ITfComposition, ITfCompositionSink, ITfContext,
     ITfContextComposition, ITfInsertAtSelection, ITfRange, TF_AE_END, TF_ANCHOR_END,
-    TF_IAS_QUERYONLY, TF_SELECTION, TF_SELECTIONSTYLE,
+    TF_ANCHOR_START, TF_IAS_QUERYONLY, TF_SELECTION, TF_SELECTIONSTYLE,
 };
 use windows::core::{Interface, Result};
 
@@ -40,9 +41,10 @@ pub(crate) fn apply(
     ec: u32,
     commit: Option<&str>,
     preedit: &str,
+    caret_utf16: Option<usize>,
 ) -> Result<()> {
     if let Some(text) = commit {
-        commit_text(shared, context, ec, text)?;
+        commit_text(shared, context, ec, text, caret_utf16)?;
     }
     // 一段组句里只问一次输入框状态。行内模式看组句刚起；`preedit = window` 模式应用里根本没有组句，
     // 得另用一个标记，否则每敲一键都要重读一遍光标前文、重报一次私密状态。
@@ -132,25 +134,65 @@ fn report_caret(shared: &Shared, engine: &SharedClient, context: &ITfContext, ec
 }
 
 /// 有组句就把组句范围替换成 `text` 再结束组句，否则在选区插入。
-fn commit_text(shared: &Shared, context: &ITfContext, ec: u32, text: &str) -> Result<()> {
+fn commit_text(
+    shared: &Shared,
+    context: &ITfContext,
+    ec: u32,
+    text: &str,
+    caret_utf16: Option<usize>,
+) -> Result<()> {
     let utf16: Vec<u16> = text.encode_utf16().collect();
+    let caret = caret_utf16.and_then(|offset| caret::checked_offset(text, offset));
+    if caret_utf16.is_some() && caret.is_none() {
+        super::log::log("Invalid commit caret ignored");
+    }
     match shared.composition() {
         Some(composition) => {
             let range = unsafe { composition.GetRange()? };
             unsafe { range.SetText(ec, 0, &utf16)? };
-            move_selection_to_end(context, ec, &range)?;
+            if caret.is_none() {
+                move_selection_to_end(context, ec, &range)?;
+            }
             unsafe { composition.EndComposition(ec)? };
             shared.set_composition(None);
+            if let Some(offset) = caret {
+                place_commit_caret(context, ec, &range, offset)?;
+            }
         }
         None => {
             let insert: ITfInsertAtSelection = context.cast()?;
-            // 标志不能用 NOQUERY：它不回传 range，windows-rs 会把 NULL 当失败。
             let range = unsafe {
                 insert.InsertTextAtSelection(ec, INSERT_TEXT_AT_SELECTION_FLAGS(0), &utf16)?
             };
-            // 不移光标的话下一次插入又落在原处，字会从右往左堆。
-            move_selection_to_end(context, ec, &range)?;
+            if let Some(offset) = caret {
+                place_commit_caret(context, ec, &range, offset)?;
+            } else {
+                move_selection_to_end(context, ec, &range)?;
+            }
         }
+    }
+    Ok(())
+}
+
+/// 写入后在同一个编辑锁中定位。宿主拒绝范围移动时保留已插入文本、回退到末尾。
+fn place_commit_caret(context: &ITfContext, ec: u32, range: &ITfRange, offset: i32) -> Result<()> {
+    let placed = (|| -> Result<()> {
+        let caret = unsafe { range.Clone()? };
+        let mut shifted = 0;
+        unsafe { caret.ShiftStart(ec, offset, &mut shifted, std::ptr::null())? };
+        if shifted != offset {
+            return Err(windows::core::Error::from(
+                windows::Win32::Foundation::E_FAIL,
+            ));
+        }
+        unsafe { caret.Collapse(ec, TF_ANCHOR_START)? };
+        select_range(context, ec, caret)
+    })();
+    if let Err(error) = placed {
+        super::log::log(&format!(
+            "Commit caret placement failed; defaulting to end: {error}"
+        ));
+        move_selection_to_end(context, ec, range)?;
     }
     Ok(())
 }
@@ -191,8 +233,12 @@ fn end_composition(shared: &Shared, ec: u32) -> Result<()> {
 pub(crate) fn move_selection_to_end(context: &ITfContext, ec: u32, range: &ITfRange) -> Result<()> {
     let end = unsafe { range.Clone()? };
     unsafe { end.Collapse(ec, TF_ANCHOR_END)? };
+    select_range(context, ec, end)
+}
+
+fn select_range(context: &ITfContext, ec: u32, range: ITfRange) -> Result<()> {
     let selection = TF_SELECTION {
-        range: ManuallyDrop::new(Some(end)),
+        range: ManuallyDrop::new(Some(range)),
         style: TF_SELECTIONSTYLE {
             ase: TF_AE_END,
             fInterimChar: false.into(),

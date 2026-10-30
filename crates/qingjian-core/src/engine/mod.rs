@@ -46,6 +46,7 @@ use qingjian_dictionary::{AuxCodeLookup, Dictionary, WordList};
 
 pub use alignment::Alignment;
 pub use annotation::AnnotationReport;
+pub use auto_translation::AutoCommit;
 pub use aux_code::is_valid_aux_code_key;
 pub use choice::{CharTable, ChoiceModel, ChoiceScore, ChoiceTier};
 pub use commit::{LastCommit, Transition};

@@ -132,6 +132,17 @@ pub enum ServerMessage {
         input: InputSettings,
     },
 
+    /// 自动双语确认；光标相对本次插入文本的起点定位，仅发给支持的DLL。
+    CommitAt {
+        session: SessionId,
+
+        text: String,
+
+        caret_utf16: usize,
+
+        frame: Frame,
+    },
+
     /// 对一次 [`super::ClientMessage::Key`] 的处理结果。
     KeyResult {
         /// 会话标识。

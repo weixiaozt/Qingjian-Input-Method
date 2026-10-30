@@ -118,6 +118,12 @@ fn client_messages() -> Vec<ClientMessage> {
 fn server_messages() -> Vec<ServerMessage> {
     let session = SessionId(9);
     vec![
+        ServerMessage::CommitAt {
+            session: SessionId(9),
+            text: "中文\nEnglish".into(),
+            caret_utf16: 2,
+            frame: Frame::default(),
+        },
         ServerMessage::SessionOpened {
             session,
             input: InputSettings::default(),

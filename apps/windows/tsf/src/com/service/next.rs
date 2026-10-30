@@ -7,6 +7,8 @@ pub(super) enum Next {
         /// 本次要立即上屏的文本。
         commit: Option<String>,
 
+        caret_utf16: Option<usize>,
+
         /// 组句拼音行；空串表示收组句。
         preedit: String,
 

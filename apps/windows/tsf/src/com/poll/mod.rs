@@ -24,10 +24,11 @@ use qingjian_platform::protocol::Frame;
 
 use self::context::PollContext;
 use super::composition::{Shared, preedit_string};
-use super::edit::request_update;
+use super::edit::request_update_with_caret;
 use super::log::log;
 use super::service::SharedClient;
 use super::window_class::WindowClass;
+use crate::client::PollResponse;
 
 const CLASS_NAME: PCWSTR = w!("QingjianPollWindow");
 static CLASS: WindowClass = WindowClass::new();
@@ -146,11 +147,19 @@ fn poll_once(context: &PollContext) {
         return;
     };
     match client.poll() {
-        Ok((frame, Some(commit))) => {
+        Ok(PollResponse {
+            frame,
+            commit: Some(commit),
+            caret_utf16,
+        }) => {
             drop(guard);
-            commit_clicked(context, &frame, commit);
+            commit_clicked(context, &frame, commit, caret_utf16);
         }
-        Ok((frame, None)) => {
+        Ok(PollResponse {
+            frame,
+            commit: None,
+            ..
+        }) => {
             context
                 .shared
                 .candidate_list()
@@ -174,7 +183,12 @@ fn poll_once(context: &PollContext) {
 }
 
 /// 鼠标点候选窗口上屏：与按键结果一样经异步编辑会话写进文档，剩下的拼音接着组句。
-fn commit_clicked(context: &PollContext, frame: &Frame, commit: String) {
+fn commit_clicked(
+    context: &PollContext,
+    frame: &Frame,
+    commit: String,
+    caret_utf16: Option<usize>,
+) {
     let Some(document) = context.shared.last_context() else {
         log(&format!("点击上屏没有上下文，丢弃: {commit:?}"));
         return;
@@ -191,13 +205,14 @@ fn commit_clicked(context: &PollContext, frame: &Frame, commit: String) {
         .candidate_list()
         .show(frame, context.shared.last_context().as_ref());
     log(&format!("点击上屏: {commit:?} preedit={preedit:?}"));
-    if let Err(error) = request_update(
+    if let Err(error) = request_update_with_caret(
         &document,
         context.client_id,
         context.engine.clone(),
         context.shared.clone(),
         Some(commit),
         preedit,
+        caret_utf16,
     ) {
         log(&format!("点击上屏的编辑会话没被受理: {error}"));
     }

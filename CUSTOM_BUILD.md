@@ -31,7 +31,7 @@ cargo build --release --locked -p qingjian-windows-server -p qingjian-windows-ts
 cargo test --locked -p qingjian-core -p qingjian-platform -p qingjian-windows-server -p qingjian-settings
 ```
 
-Windows 输入法使用协议 11。部署时须保证 DLL 与 Server 的功能兼容；已打开的软件可能仍加载旧 DLL。请先备份已有程序和配置，保存正在输入的内容，再依照 Windows 部署流程更新。此仓库不包含个人安装目录或自动覆盖本机程序的脚本。
+Windows 输入法使用协议 12。部署时须保证 DLL 与 Server 的功能兼容；已打开的软件可能仍加载旧 DLL。请先备份已有程序和配置，保存正在输入的内容，再依照 Windows 部署流程更新。此仓库不包含个人安装目录或自动覆盖本机程序的脚本。
 
 五笔测试码表目录也需部署到青简的 `assets/schemes/wubi86-sentence/`。在设置中关闭拼音、选择该形码方案，开启“五笔连续整句”和“候选自动翻译”；行内编码兼容设置使用“只在候选窗口”。详见[五笔整句文档](docs/user/input/wubi-sentence.md)。
 

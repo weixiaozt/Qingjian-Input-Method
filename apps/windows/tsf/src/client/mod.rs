@@ -2,8 +2,10 @@
 //! [`EngineClient`] 泛型在任意双工字节流上，可脱离 Windows 端到端测；`cfg(windows)` 的 `pipe` 负责连管道。
 
 mod engine;
+mod poll_response;
 mod reply;
 mod response;
+pub use poll_response::PollResponse;
 
 #[cfg(windows)]
 pub mod pipe;

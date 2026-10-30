@@ -338,6 +338,7 @@ impl TextService_Impl {
                 ));
                 Next::Document {
                     commit: response.commit,
+                    caret_utf16: response.caret_utf16,
                     preedit,
                     consumed,
                 }
@@ -385,6 +386,7 @@ impl TextService_Impl {
                     consumed: false,
                     commit,
                     preedit,
+                    ..
                 },
                 Some(c),
             ) if insertable && preedit.is_empty() => {
@@ -405,11 +407,14 @@ impl TextService_Impl {
             ) => false,
             (
                 Next::Document {
-                    commit, preedit, ..
+                    commit,
+                    preedit,
+                    caret_utf16,
+                    ..
                 },
                 _,
             ) => {
-                self.update_document(pic, commit, preedit);
+                self.update_document_with_caret(pic, commit, preedit, caret_utf16);
                 true
             }
             // 读选区是异步的：先吃掉这个键，选区文本在回调里发给 Server。
@@ -462,6 +467,7 @@ fn digit_passthrough_native(next: &Next) -> bool {
     matches!(
         next,
         Next::Document {
+            caret_utf16: None,
             consumed: false,
             commit,
             preedit,
@@ -714,6 +720,7 @@ mod tests {
         assert!(passthrough_digit_to_app('3', None));
         assert!(passthrough_digit_to_app('0', Some("")));
         assert!(digit_passthrough_native(&Next::Document {
+            caret_utf16: None,
             consumed: false,
             commit: None,
             preedit: String::new(),
@@ -723,11 +730,13 @@ mod tests {
         assert!(!passthrough_digit_to_app('-', None));
         assert!(!passthrough_digit_to_app('3', Some("hello")));
         assert!(!digit_passthrough_native(&Next::Document {
+            caret_utf16: None,
             consumed: true,
             commit: None,
             preedit: String::new(),
         }));
         assert!(!digit_passthrough_native(&Next::Document {
+            caret_utf16: None,
             consumed: false,
             commit: Some("hi".into()),
             preedit: String::new(),

@@ -241,20 +241,31 @@ impl Router {
         if learned > 0 {
             tracing::info!(learned, "释义兜底写入个人释义表");
         }
+        let mut auto_commit = None;
         let frame = if self.focused == Some(session) {
             self.sync_candidate_translation();
             self.poll_prediction();
-            self.advance_candidate_translation();
+            auto_commit = self.advance_candidate_translation();
             let shown = self.self_drawn_frame();
             self.reconcile_candidates(&shown);
             self.current_frame()
         } else {
             Frame::default()
         };
+        let clicked = self.take_clicked(session);
+        let commit = if let Some(commit) = auto_commit {
+            let commit = commit.prepend(clicked.as_deref().unwrap_or_default());
+            if let Some(message) = self.commit_at_message(session, &commit, frame.clone()) {
+                return message;
+            }
+            Some(commit.text)
+        } else {
+            clicked
+        };
         ServerMessage::Update {
             session,
             frame,
-            commit: self.take_clicked(session),
+            commit,
         }
     }
 }

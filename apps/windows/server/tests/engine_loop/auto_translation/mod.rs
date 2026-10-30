@@ -8,6 +8,7 @@ use qingjian_platform::QuickTranslationConfig;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+mod caret;
 mod provider;
 mod state;
 mod wubi;
@@ -42,6 +43,7 @@ fn poll(router: &mut Router) -> (Frame, Option<String>) {
         .unwrap()
     {
         ServerMessage::Update { frame, commit, .. } => (frame, commit),
+        ServerMessage::CommitAt { text, frame, .. } => (frame, Some(text)),
         other => panic!("unexpected {other:?}"),
     }
 }

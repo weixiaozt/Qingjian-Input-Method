@@ -5,7 +5,7 @@ use qingjian_platform::protocol::{
     ServerMessage, SessionId, read_message, write_message,
 };
 
-use super::{KeyReply, KeyResponse, ModeSyncReply};
+use super::{KeyReply, KeyResponse, ModeSyncReply, PollResponse};
 use crate::error::ClientError;
 
 /// 连 Server 的一个会话客户端，开在一条已连好的双工流上（Windows 下是命名管道，测试里是内存流）。
@@ -76,6 +76,18 @@ impl<S: Read + Write> EngineClient<S> {
             } => Ok(KeyReply::Result(KeyResponse {
                 outcome,
                 commit,
+                caret_utf16: None,
+                frame,
+            })),
+            ServerMessage::CommitAt {
+                text,
+                caret_utf16,
+                frame,
+                ..
+            } => Ok(KeyReply::Result(KeyResponse {
+                outcome: qingjian_platform::protocol::KeyOutcome::Consumed,
+                commit: Some(text),
+                caret_utf16: Some(caret_utf16),
                 frame,
             })),
             ServerMessage::RequestSentence { request, .. } => {
@@ -122,6 +134,7 @@ impl<S: Read + Write> EngineClient<S> {
             } => Ok(KeyResponse {
                 outcome,
                 commit,
+                caret_utf16: None,
                 frame,
             }),
             _ => Err(ClientError::Unexpected("expected key result for selection")),
@@ -148,11 +161,25 @@ impl<S: Read + Write> EngineClient<S> {
     }
 
     /// 组句期间定时拉一次云联想的异步结果，回最新一帧，外加鼠标点候选窗口上屏的文本（没点过为 `None`）。
-    pub fn poll(&mut self) -> Result<(Frame, Option<String>), ClientError> {
+    pub fn poll(&mut self) -> Result<PollResponse, ClientError> {
         match self.call(&ClientMessage::Poll {
             session: self.session,
         })? {
-            ServerMessage::Update { frame, commit, .. } => Ok((frame, commit)),
+            ServerMessage::Update { frame, commit, .. } => Ok(PollResponse {
+                frame,
+                commit,
+                caret_utf16: None,
+            }),
+            ServerMessage::CommitAt {
+                frame,
+                text,
+                caret_utf16,
+                ..
+            } => Ok(PollResponse {
+                frame,
+                commit: Some(text),
+                caret_utf16: Some(caret_utf16),
+            }),
             _ => Err(ClientError::Unexpected("expected update for poll")),
         }
     }
