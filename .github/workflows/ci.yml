@@ -301,8 +301,8 @@ jobs:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings -p qingjian-settings --no-deps --locked
 
-      - name: Test (Server, TSF DLL, Settings)
-        run: cargo test -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings -p qingjian-settings --locked
+      - name: Test (Protocol, Server, TSF DLL, Settings)
+        run: cargo test -p qingjian-platform -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings -p qingjian-settings --locked
 
       # 安装包另带一份 32 位 DLL（企业微信 / WPS 这类 32 位应用只能加载它）
       - name: Check (TSF DLL, 32-bit)

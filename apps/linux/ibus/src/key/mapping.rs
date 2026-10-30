@@ -27,11 +27,12 @@ pub fn to_key_event(keysym_value: u32, state: u32) -> KeyEvent {
     if keysym_value == keysym::ISO_LEFT_TAB {
         modifiers.shift = true;
     }
-    KeyEvent {
-        virtual_key: virtual_key(keysym_value, modifiers.shift),
-        character: keysym::to_char(keysym_value),
+    // Linux的抬键状态由外层LinuxEvent携带；通用字段使用统一构造函数的兼容默认值。
+    KeyEvent::new(
+        virtual_key(keysym_value, modifiers.shift),
+        keysym::to_char(keysym_value),
         modifiers,
-    }
+    )
 }
 
 /// keysym → 虚拟键码。认不出来的原样交出去（ASCII 字母与符号就走这一条）。
