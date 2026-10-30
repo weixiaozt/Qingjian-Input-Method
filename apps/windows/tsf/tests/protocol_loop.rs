@@ -1,11 +1,12 @@
 //! DLL 引擎层的端到端协议测试：把 [`EngineClient`] 接到真正的 Server（`qingjian-windows-server` 的
-//! [`Router`] + [`serve`](qingjian_windows_server::ipc::serve)），两端各在一条 socketpair 上，验证
+//! [`Router`] + [`serve`](qingjian_windows_server::ipc::serve)），两端接一条双工流，验证
 //! 「开会话 → 敲拼音收到候选 → 空格上屏」这条 IPC 闭环。
 //!
-//! 用 `UnixStream::pair` 起真双工流，所以只在 Unix 跑（mac 上开发时能验证 client 编排）；Windows 上
-//! 同一套 [`EngineClient`] 由命名管道驱动，靠交互测试。样例词库来自 `assets/sample/`，无需产品数据。
-#![cfg(unix)]
+//! Unix 使用 socketpair，Windows 使用本机回环TCP，使同一组协议测试在本机和CI都能编译运行。
+//! 这里只验证传输与编排，不替代真实TSF/命名管道交互验收。样例词库来自 `assets/sample/`。
+#![cfg(any(unix, windows))]
 
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::thread;
@@ -17,6 +18,33 @@ use qingjian_windows_server::{AssemblySpec, Router, RouterConfig, assembly, ipc}
 
 const SESSION: SessionId = SessionId(1);
 
+#[cfg(unix)]
+type TestStream = UnixStream;
+#[cfg(windows)]
+type TestStream = std::net::TcpStream;
+
+#[cfg(unix)]
+fn stream_pair() -> (TestStream, TestStream) {
+    UnixStream::pair().expect("socket pair")
+}
+
+#[cfg(windows)]
+fn stream_pair() -> (TestStream, TestStream) {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+    let client = TestStream::connect(listener.local_addr().unwrap()).expect("loopback client");
+    let (server, _) = listener.accept().expect("loopback server");
+    for stream in [&client, &server] {
+        stream.set_nodelay(true).unwrap();
+        stream
+            .set_read_timeout(Some(std::time::Duration::from_secs(10)))
+            .unwrap();
+        stream
+            .set_write_timeout(Some(std::time::Duration::from_secs(10)))
+            .unwrap();
+    }
+    (client, server)
+}
+
 /// 一个字母键（`character` 带小写字母，虚拟键码用其大写 ASCII）。
 fn letter(c: char) -> KeyEvent {
     KeyEvent::new(c.to_ascii_uppercase() as u32, Some(c), Default::default())
@@ -27,11 +55,13 @@ fn result(reply: KeyReply) -> KeyResponse {
     match reply {
         KeyReply::Result(response) => response,
         KeyReply::NeedSelection { .. } => panic!("没料到 Server 要读选区"),
+        KeyReply::NeedSentence { .. } => panic!("普通输入不应请求读取句子"),
+        KeyReply::Translation { .. } => panic!("普通输入不应提交选区翻译"),
     }
 }
 
 /// 起一个后台 Server：用样例词库装 Router，在 `server_end` 上 serve 到对端关闭。
-fn spawn_server(server_end: UnixStream) -> thread::JoinHandle<()> {
+fn spawn_server(server_end: TestStream) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
         let dict = root.join("assets/sample/dict.tsv");
@@ -49,7 +79,7 @@ fn spawn_server(server_end: UnixStream) -> thread::JoinHandle<()> {
 
 #[test]
 fn client_types_pinyin_and_gets_candidates() {
-    let (client_end, server_end) = UnixStream::pair().unwrap();
+    let (client_end, server_end) = stream_pair();
     let server = spawn_server(server_end);
 
     let (mut client, _input) = EngineClient::open(client_end, SESSION, None).expect("open session");
@@ -86,7 +116,7 @@ fn client_types_pinyin_and_gets_candidates() {
 
 #[test]
 fn space_commits_first_candidate() {
-    let (client_end, server_end) = UnixStream::pair().unwrap();
+    let (client_end, server_end) = stream_pair();
     let server = spawn_server(server_end);
 
     let (mut client, _input) = EngineClient::open(client_end, SESSION, None).expect("open session");
@@ -109,7 +139,7 @@ fn space_commits_first_candidate() {
 
 #[test]
 fn commit_returns_raw_text() {
-    let (client_end, server_end) = UnixStream::pair().unwrap();
+    let (client_end, server_end) = stream_pair();
     let server = spawn_server(server_end);
 
     let (mut client, _input) = EngineClient::open(client_end, SESSION, None).expect("open session");
@@ -132,7 +162,7 @@ fn commit_returns_raw_text() {
 /// 而是走常规分派（带 Ctrl/Alt 的键 Router 一律 Passthrough 交回应用）。真正的翻译闭环靠真机测（要云服务）。
 #[test]
 fn translate_combo_is_dormant_without_cloud() {
-    let (client_end, server_end) = UnixStream::pair().unwrap();
+    let (client_end, server_end) = stream_pair();
     let server = spawn_server(server_end);
 
     let (mut client, _input) = EngineClient::open(client_end, SESSION, None).expect("open session");
@@ -146,18 +176,13 @@ fn translate_combo_is_dormant_without_cloud() {
             ..Default::default()
         },
     );
-    let reply = client.key(combo).expect("combo round-trips");
-    match reply {
-        KeyReply::Result(response) => {
-            assert_eq!(
-                response.outcome,
-                KeyOutcome::Passthrough,
-                "云服务关着，带 Ctrl/Alt 的键应放行给应用"
-            );
-            assert!(response.frame.is_empty(), "不该起组句 / 候选");
-        }
-        KeyReply::NeedSelection { .. } => panic!("云服务关着不该要求读选区"),
-    }
+    let response = result(client.key(combo).expect("combo round-trips"));
+    assert_eq!(
+        response.outcome,
+        KeyOutcome::Passthrough,
+        "云服务关着，带 Ctrl/Alt 的键应放行给应用"
+    );
+    assert!(response.frame.is_empty(), "不该起组句 / 候选");
 
     client.close().expect("close session");
     server.join().unwrap();
