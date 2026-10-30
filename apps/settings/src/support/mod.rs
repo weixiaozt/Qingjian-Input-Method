@@ -208,6 +208,10 @@ impl Feature {
                 (PageId::Cloud, "候选自动翻译"),
                 (PageId::Cloud, "双语长按时长"),
                 (PageId::Cloud, "快捷整句翻译"),
+                (PageId::Cloud, "翻译模式"),
+                (PageId::Cloud, "双语另起一行"),
+                (PageId::Cloud, "本地翻译地址"),
+                (PageId::Cloud, "本地翻译模型"),
                 (PageId::Shortcuts, "切换翻译模式"),
             ],
             Self::SwitchKeyCombos
