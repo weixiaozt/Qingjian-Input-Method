@@ -1,6 +1,10 @@
 //! Linux前端和C++测试桩的共享版本必须与Rust主协议一致；此检查在所有平台运行。
 use qingjian_platform::protocol::PROTOCOL_VERSION;
 
+// 复用Linux Server的真实协议检查，让Windows也覆盖发送端对常量的引用。
+#[path = "../../../apps/linux/server/tests/protocol.rs"]
+mod linux_protocol;
+
 #[test]
 fn cpp_frontends_and_mocks_use_the_current_rust_protocol() {
     let header = include_str!("../../../apps/linux/protocol_version.h");

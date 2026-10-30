@@ -74,14 +74,20 @@ fn linux_display_identity_round_trips_without_changing_shared_protocol() {
     assert_eq!(decoded.senses, vec![(0, 1), (3, 0)]);
 }
 
-/// Fcitx5 插件的 OpenSession 把协议版本写死在 C++ 里；Server 要求完全一致，升版本时两边得一起改。
+/// 两个C++前端必须使用共享版本，且该版本与Rust Server完全一致。
 #[test]
-fn fcitx5_plugin_opens_sessions_with_the_current_protocol() {
-    let plugin = concat!(env!("CARGO_MANIFEST_DIR"), "/../fcitx5/src/qingjian.cpp");
-    let source = std::fs::read_to_string(plugin).unwrap();
-    let expected = format!("{{\"protocol\", {PROTOCOL_VERSION}}}");
+fn cpp_plugins_open_sessions_with_the_current_protocol() {
+    let header = include_str!("../../protocol_version.h");
+    let expected_version = format!("PROTOCOL_VERSION = {PROTOCOL_VERSION};");
     assert!(
-        source.contains(&expected),
-        "qingjian.cpp 的 OpenSession 应写 {expected}"
+        header.contains(&expected_version),
+        "共享C++头文件应声明 {expected_version}"
     );
+    for source in [
+        include_str!("../../fcitx4/src/qingjian.cpp"),
+        include_str!("../../fcitx5/src/qingjian.cpp"),
+    ] {
+        assert!(source.contains("#include \"../../protocol_version.h\""));
+        assert!(source.contains("{\"protocol\", qingjian::PROTOCOL_VERSION}"));
+    }
 }
