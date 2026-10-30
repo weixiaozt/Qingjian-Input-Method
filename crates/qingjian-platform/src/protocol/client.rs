@@ -8,6 +8,13 @@ use super::session::SessionId;
 /// DLL（客户端，每个应用进程里一个）发给 Server 的消息。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientMessage {
+    /// 经过客户端长按与组合键判定的方案切换；仍由Server检查未确认输入。
+    ToggleInputScheme {
+        session: SessionId,
+
+        #[serde(default)]
+        composing: bool,
+    },
     /// 进入一个 TSF 文档，开一个会话。
     OpenSession {
         /// 会话标识。

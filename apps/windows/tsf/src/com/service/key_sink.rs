@@ -34,8 +34,10 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         let vk = wparam.0 as u32;
         self.note_key_down(vk, lparam);
         if self.keyboard_disabled(&pic) {
+            self.reset_scheme_hold();
             return Ok(FALSE);
         }
+        self.scheme_key_down(&pic, vk, lparam);
         let event = self.key_event(vk);
         if vk == 0x20 && self.space_owned.get() {
             return Ok(true.into());
@@ -50,8 +52,10 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         let vk = wparam.0 as u32;
         self.note_key_down(vk, lparam);
         if self.keyboard_disabled(&pic) {
+            self.reset_scheme_hold();
             return Ok(FALSE);
         }
+        self.scheme_key_down(&pic, vk, lparam);
         let event = self.key_event(vk);
         if vk == 0x20 && self.space_owned.get() {
             return Ok(true.into());
@@ -75,12 +79,20 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         Ok(self.handle_key(pic, event).into())
     }
 
-    fn OnTestKeyUp(&self, _pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
+    fn OnTestKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
+        if self.keyboard_disabled(&pic) {
+            self.reset_scheme_hold();
+        }
+        self.scheme_key_up(&pic, wparam.0 as u32, lparam);
         self.note_key_up(wparam.0 as u32);
         Ok((wparam.0 == 0x20 && self.space_owned.get()).into())
     }
 
-    fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
+    fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
+        if self.keyboard_disabled(&pic) {
+            self.reset_scheme_hold();
+        }
+        self.scheme_key_up(&pic, wparam.0 as u32, lparam);
         self.note_key_up(wparam.0 as u32);
         if wparam.0 == 0x20 && self.space_owned.replace(false) {
             let original = self.space_context.borrow_mut().take();
@@ -106,6 +118,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             return Ok(FALSE);
         }
         self.key_tap.cancel();
+        self.cancel_scheme_hold();
         if guid == preserved::GUID_PUNCTUATION {
             return Ok(
                 (self.punctuation_combo.get().is_some() && self.toggle_punctuation()).into(),

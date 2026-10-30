@@ -136,6 +136,12 @@ impl Router {
     }
 
     /// `config.toml` 路径；没开热加载（测试）时为 `None`。
+    pub(super) fn accept_config_stamp(&mut self) {
+        if let Some(reload) = self.reload.as_mut() {
+            reload.last_mtime = mtime(&reload.config_path);
+        }
+    }
+
     pub(super) fn config_path(&self) -> Option<&Path> {
         self.reload
             .as_ref()
@@ -248,7 +254,7 @@ impl Router {
     }
 
     /// 应用新配置。学习语言变了换释义表（词汇等级表启动时已全装，不用换）。
-    fn apply_config(&mut self, config: &Config) {
+    pub(super) fn apply_config(&mut self, config: &Config) {
         self.engine.set_fuzzy(config.fuzzy);
         // Windows 端此前漏装 custom_phrases（macOS 端 apply_config 有）；失败只记日志，保持原短语
         if let Err(error) = self

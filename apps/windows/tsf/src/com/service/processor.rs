@@ -95,6 +95,7 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
     }
 
     fn Deactivate(&self) -> Result<()> {
+        self.reset_scheme_hold();
         // 先撤回调，之后不再有回调碰本服务。
         ACTIVE.with(|active| active.borrow_mut().take());
         self.unadvise_mode_sinks();

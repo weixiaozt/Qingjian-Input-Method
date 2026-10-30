@@ -3,7 +3,7 @@
 
 use bamboo_slip::taffy::{FlexDirection, LengthPercentage, NodeId, Rect, Style};
 use bamboo_slip::{
-    Button, Checkbox, KeyRecorder, RenderError, Segmented, SettingRow, Ui, Visual, group,
+    Button, Checkbox, KeyRecorder, RenderError, Segmented, SettingRow, Stepper, Ui, Visual, group,
     paragraph, section_title,
 };
 use qingjian_core::ModeKeys;
@@ -45,6 +45,18 @@ pub fn shortcuts(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Rende
             .control(page_keys)
             .build(ui, theme)?,
     ];
+    if Feature::QuickTranslation.here() {
+        rows.push(toggle_info(
+            ui,
+            page,
+            "长按右 Ctrl 切换拼音/五笔",
+            Some("单独按住并松开切换；组合键不触发，未确认输入时保持原方案"),
+            ("shortcut", "right_control_scheme_switch"),
+            config.shortcut.right_control_scheme_switch,
+            false,
+        )?);
+        rows.push(scheme_hold_timing(ui, page)?);
+    }
     rows.extend(extra_keys(ui, page, &labels)?);
     rows.extend([
         SettingRow::new("表达式")
@@ -285,4 +297,34 @@ pub fn recorder(
             .control(control),
         shortcut.title(),
     )
+}
+
+fn scheme_hold_timing(ui: &mut Ui<Message>, page: &Page) -> Result<NodeId, RenderError> {
+    let value = page
+        .settings
+        .config
+        .shortcut
+        .right_control_scheme_hold_ms
+        .clamp(300, 2000);
+    let control = Stepper::new(&format!("{value} 毫秒"))
+        .disabled(!page.settings.config.shortcut.right_control_scheme_switch)
+        .limits(value > 300, value < 2000)
+        .build(
+            ui,
+            &page.theme,
+            "scheme-hold-timing",
+            Message::set(
+                "shortcut",
+                "right_control_scheme_hold_ms",
+                value.saturating_sub(100).max(300) as i64,
+            ),
+            Message::set(
+                "shortcut",
+                "right_control_scheme_hold_ms",
+                (value + 100).min(2000) as i64,
+            ),
+        )?;
+    SettingRow::new("方案切换长按时长")
+        .control(control)
+        .build(ui, &page.theme)
 }

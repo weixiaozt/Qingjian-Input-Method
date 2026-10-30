@@ -433,7 +433,9 @@ impl Router {
     /// 焦点会话的 DLL 比 Server 老时按老协议降级（见 [`Self::downgrade_for_old_dll`]）。
     pub(super) fn current_frame(&self) -> Frame {
         let mut frame = self.raw_frame();
-        if let Some(notice) = self.engine.auto_translation_notice() {
+        if self.notice.is_none()
+            && let Some(notice) = self.engine.auto_translation_notice()
+        {
             frame.notice = Some(notice.to_owned());
         }
         self.show_typed_keys(&mut frame);
@@ -463,7 +465,9 @@ impl Router {
     /// 自绘候选窗用的帧：不做老 DLL 降级，码段照常画。
     pub(super) fn self_drawn_frame(&self) -> Frame {
         let mut frame = self.raw_frame();
-        if let Some(notice) = self.engine.auto_translation_notice() {
+        if self.notice.is_none()
+            && let Some(notice) = self.engine.auto_translation_notice()
+        {
             frame.notice = Some(notice.to_owned());
         }
         if frame.is_empty()

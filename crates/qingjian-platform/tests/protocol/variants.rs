@@ -53,6 +53,10 @@ fn key_event() -> KeyEvent {
 fn client_messages() -> Vec<ClientMessage> {
     let session = SessionId(9);
     vec![
+        ClientMessage::ToggleInputScheme {
+            session: SessionId(9),
+            composing: false,
+        },
         ClientMessage::OpenSession {
             session,
             app: Some("notepad.exe".to_owned()),

@@ -57,6 +57,15 @@ impl TextService_Impl {
     /// 应用 Server 下发的按键行为设置：`OpenSession` 的回包给一次，之后每一拍 `SyncMode` 也都带着。
     /// 值没变就什么都不做，所以设置窗口改完在下一拍（约 320 ms）生效，不用切走再切回输入法。
     pub(super) fn apply_input_settings(&self, input: InputSettings) {
+        if self
+            .input_settings
+            .get()
+            .unwrap_or_default()
+            .right_control_scheme_hold_ms
+            != input.right_control_scheme_hold_ms
+        {
+            self.reset_scheme_hold();
+        }
         // 获焦可能早于 Activate；与标点键一样，只有登记成功才记住组合，下一拍可补登记。
         self.sync_punctuation_key(input.toggle_punctuation);
         self.sync_traditional_key(input.toggle_traditional);
@@ -261,6 +270,7 @@ impl TextService_Impl {
     /// 组句中才真有东西要落定（`commit_pending` 自己会判），没在组句时这条是空转。
     pub(super) fn set_focus(&self, foreground: bool) {
         if !foreground {
+            self.reset_scheme_hold();
             self.space_owned.set(false);
             self.space_context.borrow_mut().take();
             self.commit_pending();
@@ -332,6 +342,7 @@ impl TextService_Impl {
     /// 这个热键的 Space 被系统截走，按着的 Ctrl 抬起时别再当成单击。
     pub(super) fn sync_from_keyboard_open(&self) {
         self.key_tap.cancel();
+        self.cancel_scheme_hold();
         let Some(thread_mgr) = self.thread_mgr.borrow().clone() else {
             return;
         };

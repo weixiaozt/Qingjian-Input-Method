@@ -14,6 +14,7 @@ mod mode;
 mod panel;
 mod reload;
 mod rescore;
+mod scheme_switch;
 mod schemes;
 mod session;
 mod status;
@@ -235,6 +236,11 @@ impl Router {
             .get(&session)
             .and_then(|info| info.app.as_deref());
         InputSettings {
+            right_control_scheme_hold_ms: self
+                .sessions
+                .get(&session)
+                .filter(|info| info.protocol >= qingjian_platform::protocol::SCHEME_HOLD_SINCE)
+                .and(self.config.right_control_scheme_hold_ms),
             candidate_translation: self.config.quick_translation.candidate_enabled
                 && (self.config.scheme.is_on() || self.config.quick_translation.wubi_sentence)
                 && !self.config.zhuyin

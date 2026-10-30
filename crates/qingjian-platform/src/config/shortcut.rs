@@ -18,6 +18,11 @@ pub struct ShortcutConfig {
     /// 中 / 英切换键（Windows、Linux 用），可多选：`["shift", "control", "ctrl+alt+space"]`。详见 [`SwitchKeys`]。
     pub switch_mode: SwitchKeys,
 
+    /// Windows：单独长按右Ctrl并松开，切换全拼与五笔整句。
+    pub right_control_scheme_switch: bool,
+
+    pub right_control_scheme_hold_ms: u64,
+
     /// 候选高亮由 `↑` / `↓` 还是 `←` / `→` 移动（Windows 用）。详见 [`HighlightKeys`]。
     pub highlight_keys: HighlightKeys,
 
@@ -70,6 +75,8 @@ impl Default for ShortcutConfig {
         Self {
             mode: ModeKeys::default(),
             switch_mode: SwitchKeys::default(),
+            right_control_scheme_switch: false,
+            right_control_scheme_hold_ms: 600,
             highlight_keys: HighlightKeys::UpDown,
             toggle_punctuation: None,
             extra_page_keys: PageKeys::default(),

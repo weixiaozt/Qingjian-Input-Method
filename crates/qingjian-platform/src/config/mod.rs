@@ -23,6 +23,7 @@ mod preedit_mode;
 mod quick_translation;
 mod retired;
 mod scheme;
+mod sentence_scheme;
 mod shift_letter;
 mod shortcut;
 mod status_bar;

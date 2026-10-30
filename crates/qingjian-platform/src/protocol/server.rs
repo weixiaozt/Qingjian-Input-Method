@@ -52,6 +52,9 @@ pub struct InputSettings {
 
     #[serde(default)]
     pub candidate_translation: bool,
+
+    #[serde(default)]
+    pub right_control_scheme_hold_ms: Option<u64>,
 }
 
 fn english_candidates_default() -> bool {
@@ -71,6 +74,7 @@ impl Default for InputSettings {
             predict: None,
             cycle_translation: None,
             candidate_translation: false,
+            right_control_scheme_hold_ms: None,
         }
     }
 }

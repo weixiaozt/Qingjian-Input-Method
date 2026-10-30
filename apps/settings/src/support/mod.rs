@@ -202,6 +202,8 @@ impl Feature {
             Self::NumpadDigit => &[(PageId::Candidates, "小键盘数字")],
             Self::ShuangpinRawWindow => &[(PageId::Input, "候选窗显示按键")],
             Self::QuickTranslation => &[
+                (PageId::Shortcuts, "长按右 Ctrl 切换拼音/五笔"),
+                (PageId::Shortcuts, "方案切换长按时长"),
                 (PageId::Input, "五笔连续整句"),
                 (PageId::Cloud, "候选自动翻译"),
                 (PageId::Cloud, "双语长按时长"),

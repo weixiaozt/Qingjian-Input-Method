@@ -131,6 +131,8 @@ pub struct RouterConfig {
     /// 拼音侧方案（`[general] scheme`）。
     pub scheme: Scheme,
 
+    pub right_control_scheme_hold_ms: Option<u64>,
+
     /// 繁体输出（`[general] traditional_variant`），给候选窗口主题显示简 / 繁。
     pub traditional: bool,
 
@@ -234,6 +236,12 @@ impl From<&Config> for RouterConfig {
             status_pos: config.status_bar.x.zip(config.status_bar.y),
             status_size: config.status_bar.size.clamp(60, 150),
             scheme: config.general.scheme(),
+            right_control_scheme_hold_ms: config.shortcut.right_control_scheme_switch.then_some(
+                config
+                    .shortcut
+                    .right_control_scheme_hold_ms
+                    .clamp(300, 2000),
+            ),
             traditional: config.general.traditional() != TraditionalVariant::Off,
             last_traditional: config.general.last_traditional(),
             aux_code_key: config.general.aux_code_key(),

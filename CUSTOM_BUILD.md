@@ -31,7 +31,7 @@ cargo build --release --locked -p qingjian-windows-server -p qingjian-windows-ts
 cargo test --locked -p qingjian-core -p qingjian-platform -p qingjian-windows-server -p qingjian-settings
 ```
 
-Windows 输入法使用协议 12。部署时须保证 DLL 与 Server 的功能兼容；已打开的软件可能仍加载旧 DLL。请先备份已有程序和配置，保存正在输入的内容，再依照 Windows 部署流程更新。此仓库不包含个人安装目录或自动覆盖本机程序的脚本。
+Windows 输入法使用协议 13。部署时须保证 DLL 与 Server 的功能兼容；已打开的软件可能仍加载旧 DLL。请先备份已有程序和配置，保存正在输入的内容，再依照 Windows 部署流程更新。此仓库不包含个人安装目录或自动覆盖本机程序的脚本。
 
 五笔测试码表目录也需部署到青简的 `assets/schemes/wubi86-sentence/`。在设置中关闭拼音、选择该形码方案，开启“五笔连续整句”和“候选自动翻译”；行内编码兼容设置使用“只在候选窗口”。详见[五笔整句文档](docs/user/input/wubi-sentence.md)。
 
@@ -62,3 +62,7 @@ model = "translategemma:4b"
 拼音版已由用户在实际窗口测试；五笔集成版仍处于微信等应用试用阶段。macOS/Linux 尚未接入这些 Windows 设置与确认方式。实验台的点击分词锁定界面尚未接入系统候选窗。
 
 仓库只包含源码、码表、测试与文档；不上传模型权重、安装包、个人输入日志、反馈、配置、密钥及运行时缓存。
+
+## 长按切换输入方案
+
+Windows 可在快捷键设置中启用长按右 Ctrl 切换全拼/五笔整句，默认600毫秒，松开后执行；组合键及鼠标操作不触发。配置为 `[shortcut] right_control_scheme_switch = true` 和 `right_control_scheme_hold_ms = 600`。已有未确认内容时拒绝切换并保留文字。

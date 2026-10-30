@@ -113,3 +113,7 @@ model = "translategemma:4b"
 ## 五笔连续整句（Windows测试）
 
 `[quick_translation] wubi_sentence = true` 启用纯形码整句解码；`[general] scheme = "none"`、`code = "wubi86-sentence"` 选择测试码表。保留 `candidate_enabled = true` 可自动翻译并长按空格上屏双语；`preedit = "window"` 将编码仅显示在候选窗口。关闭整句开关或切回拼音恢复普通查询。
+
+## 长按右 Ctrl 切换方案（Windows）
+
+在 `[shortcut]` 中设 `right_control_scheme_switch = true` 开启，`right_control_scheme_hold_ms = 600` 为默认门槛（范围300–2000毫秒）。仅单独长按右Ctrl并松开触发；切换会原子更新全局拼音/形码选择并保存，保留翻译和其他设置。需新版DLL，安装后重新打开目标应用。

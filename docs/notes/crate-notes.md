@@ -730,3 +730,7 @@ Core code_sentence迁入独立实验台的有界词图搜索（96字母，96路�
 ### 双语提交的中文插入点
 
 Core AutoCommit同时返回文本和中文末尾的UTF-16偏移。Windows协议12新增CommitAt，仅向支持的DLL发送，键松开与轮询确认共用；旧DLL退回原来的KeyResult/Update提交。新DLL在同一异步编辑会话中写入文本并设置折叠选区；先结束行内组句，再对插入范围ShiftStart定位。偏移先校验范围与代理对边界，宿主拒绝定位时保留文本并回退末尾，记录无正文诊断。Core的退格/自动空格历史按新光标处的中文恢复，防止后续输入误沿用英文尾字。
+
+### 右Ctrl长按方案切换
+
+协议13增加ToggleInputScheme命令及InputSettings长按时长，旧Server默认不启用。TSF按VK_RCONTROL或扩展VK_CONTROL识别右键，松开时判定单独长按；重复回调不重置时间，键盘组合、同线程鼠标点击/滚轮、失焦/停用取消。短期WH_MOUSE只观察本输入线程，始终传给后续钩子。Server再次检查输入/翻译/面板/待提交文本，忙时不改变状态。空闲时原子写general.scheme/code及wubi_sentence开关，立即装配全拼或五笔86整句，保留其他配置，记住全局方案并回到中文模式。

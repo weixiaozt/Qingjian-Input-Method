@@ -7,6 +7,12 @@ const DOCS_URL: &str = "https://qingjian.app/docs";
 
 /// （页、行标题、文档（`docs/user/` 下的路径，不带 `.md`）、标题（空着是整页））。
 const LINKS: &[(PageId, &str, &str, &str)] = &[
+    (
+        PageId::Shortcuts,
+        "长按右 Ctrl 切换拼音/五笔",
+        "input/wubi-sentence",
+        "长按右 Ctrl 切换方案",
+    ),
     (PageId::Input, "五笔连续整句", "input/wubi-sentence", ""),
     (
         PageId::Cloud,

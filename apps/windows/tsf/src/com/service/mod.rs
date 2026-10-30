@@ -13,6 +13,7 @@ mod next;
 mod panel;
 mod processor;
 mod punctuation;
+mod scheme_switch;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -123,6 +124,12 @@ pub struct TextService {
     /// 仅注音等会 Consumed 的数字会进这里；Passthrough 的数字在 Test 里直接放行、不缓存。
     pending_digit: RefCell<Option<next::Next>>,
 
+    scheme_hold: crate::com::key::SchemeHold,
+
+    scheme_context: RefCell<Option<windows::Win32::UI::TextServices::ITfContext>>,
+
+    scheme_mouse_guard: RefCell<Option<crate::com::key::SchemeMouseGuard>>,
+
     space_owned: Cell<bool>,
 
     space_context: RefCell<Option<windows::Win32::UI::TextServices::ITfContext>>,
@@ -217,6 +224,9 @@ impl TextService {
             launch_grace_until: Cell::new(None),
             launch_grace_logged: Cell::new(false),
             pending_digit: RefCell::new(None),
+            scheme_hold: crate::com::key::SchemeHold::default(),
+            scheme_context: RefCell::new(None),
+            scheme_mouse_guard: RefCell::new(None),
             space_owned: Cell::new(false),
             space_context: RefCell::new(None),
         }
@@ -254,4 +264,11 @@ pub(crate) fn candidate_context_valid(
                 .is_some_and(|focused| focused == *context);
     });
     valid
+}
+
+pub(crate) fn cancel_scheme_hold_from_mouse() {
+    with_active(|service| {
+        service.cancel_scheme_hold();
+        service.key_tap.cancel();
+    });
 }

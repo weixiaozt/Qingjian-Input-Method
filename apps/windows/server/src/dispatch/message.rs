@@ -12,6 +12,9 @@ use super::session::SessionInfo;
 impl Router {
     pub(super) fn dispatch(&mut self, message: ClientMessage) -> Option<ServerMessage> {
         match message {
+            ClientMessage::ToggleInputScheme { session, composing } => {
+                Some(self.toggle_input_scheme(session, composing))
+            }
             ClientMessage::OpenSession {
                 session,
                 app,

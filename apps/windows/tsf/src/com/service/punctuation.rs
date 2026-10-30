@@ -33,6 +33,7 @@ impl TextService_Impl {
 
     pub(super) fn toggle_punctuation(&self) -> bool {
         self.key_tap.cancel();
+        self.cancel_scheme_hold();
         if !self.ensure_connected() {
             return false;
         }
