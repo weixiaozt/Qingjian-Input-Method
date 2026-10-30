@@ -34,13 +34,21 @@ impl Engine {
         });
         query.candidates.items = paths
             .into_iter()
-            .map(|path| Candidate {
-                text: path.text,
-                kind: CandidateKind::Code,
-                syllables: Vec::new(),
-                reading: None,
-                translation: None,
-                aux_code: None,
+            .map(|path| {
+                // 词组即使按单字输入也可提示；不为任意自动组句拼接编码。
+                let aux_code = self
+                    .code_decoder
+                    .as_ref()
+                    .and_then(|decoder| decoder.word_code(&path.text))
+                    .and_then(|code| self.code_word_hint(&path.text, code));
+                Candidate {
+                    text: path.text,
+                    kind: CandidateKind::Code,
+                    syllables: Vec::new(),
+                    reading: None,
+                    translation: None,
+                    aux_code,
+                }
             })
             .collect();
         query.timings.rank += decoding_started.elapsed();
@@ -135,7 +143,7 @@ impl Engine {
                 syllables: Vec::new(),
                 reading: None,
                 translation: None,
-                aux_code: None,
+                aux_code: self.code_word_hint(s.hit.text, s.hit.pinyin),
             })
             .collect();
         let query = Query {

@@ -115,3 +115,22 @@ fn native_client_receives_space_release_support_for_wubi() {
         matches!(message,Some(ServerMessage::ModeSync{input,..}) if input.candidate_translation)
     );
 }
+
+#[test]
+fn word_code_hint_never_enters_translation_or_bilingual_commit() {
+    let (mut r, state) = setup();
+    r.engine_mut().set_aux_show(true);
+    r.engine_mut().set_aux_codes(vec![Arc::new(
+        qingjian_dictionary::AuxCodeTable::from_pairs([("你".into(), "wqiy".into())]).unwrap(),
+    )]);
+    type_codes(&mut r, "wq");
+    let seq = wait_request(&mut r, &state);
+    let frame = poll(&mut r).0;
+    assert_eq!(frame.candidates.items[0].aux_code.as_deref(), Some("wqiy"));
+    assert_eq!(state.lock().unwrap().requests.last().unwrap().text, "你");
+    response(&state, seq, Some("You."));
+    poll(&mut r);
+    space(&mut r, false);
+    std::thread::sleep(Duration::from_millis(220));
+    assert_eq!(poll(&mut r).1.as_deref(), Some("你\nYou."));
+}

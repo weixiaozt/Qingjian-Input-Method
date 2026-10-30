@@ -15,6 +15,9 @@ pub struct Decoder {
 
     prefixes: HashSet<String>,
 
+    /// 只记录码表实际收录的字词，用于区分词组候选与临时组出的整句。
+    word_codes: HashMap<String, String>,
+
     total: f64,
 
     pub entries: usize,
@@ -25,11 +28,22 @@ impl Decoder {
         let mut table: HashMap<String, Vec<Entry>> = HashMap::new();
         let mut frequencies: HashMap<String, u32> = HashMap::new();
         let mut prefixes = HashSet::new();
+        let mut word_codes: HashMap<String, String> = HashMap::new();
         for item in source.entries() {
             let (text, code, frequency) = (item.text, item.pinyin, item.frequency.max(1));
             if code.is_empty() || code.len() > 4 || !code.bytes().all(|c| c.is_ascii_lowercase()) {
                 continue;
             }
+            word_codes
+                .entry(text.to_owned())
+                .and_modify(|known| {
+                    if code.len() > known.len()
+                        || (code.len() == known.len() && code < known.as_str())
+                    {
+                        *known = code.to_owned();
+                    }
+                })
+                .or_insert_with(|| code.to_owned());
             frequencies
                 .entry(text.into())
                 .and_modify(|f| *f = (*f).max(frequency))
@@ -55,8 +69,14 @@ impl Decoder {
             table,
             total,
             prefixes,
+            word_codes,
             entries: count,
         }
+    }
+
+    /// 返回独立码表词目的完整编码，不对任意整句自动造码。
+    pub fn word_code(&self, text: &str) -> Option<&str> {
+        self.word_codes.get(text).map(String::as_str)
     }
 
     fn extend(

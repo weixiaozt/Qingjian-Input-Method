@@ -16,6 +16,16 @@ pub fn is_valid_aux_code_key(key: char, page_keys: (char, char)) -> bool {
 }
 
 impl Engine {
+    /// 形码字词的显示提示：优先沿用用户的反查码表，缺失时使用命中的编码。
+    /// 仅用于候选元数据，不改变候选正文或上屏文本。
+    pub(super) fn code_word_hint(&self, word: &str, matched_code: &str) -> Option<String> {
+        self.aux_show.then(|| {
+            self.matching_code(word, "")
+                .map(Cow::into_owned)
+                .unwrap_or_else(|| matched_code.to_owned())
+        })
+    }
+
     /// 敲下 `key` 是不是要进辅码态。五条边界：
     ///
     /// - 辅码开着且有可用码表（`[aux_code] enabled` 缺省关；没装表或表全被关掉都不触发，`;` 保持原生行为）；

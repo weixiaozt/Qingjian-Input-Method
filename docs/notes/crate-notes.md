@@ -724,3 +724,5 @@ Core `engine/auto_translation` 持有高亮候选、已选中文前缀、输入�
 ### 五笔连续整句实验集成
 
 Core code_sentence迁入独立实验台的有界词图搜索（96字母，96路径，32同码词，12结果），语言模型通过现有LanguageModel trait注入。CodeTable.entries用于一次性建索引；更换码表时重建。Engine.set_code_sentence控制纯形码整句查询，禁用顶字/满码自动提交；候选沿用Code类型，不增加线上枚举。Code句子只记录编码选择，不作为整词学习。自动候选翻译接受整句Code候选。Windows读取quick_translation.wubi_sentence，InputSettings下发空格松开能力；原协议11 DLL可复用。焦点离开丢弃未确认编码，Enter确认中文。CLI --wubi-sentence可验证同一Engine路径。
+
+形码候选的字词编码标注沿用 `aux_show` 开关及 `matching_code` 反查表；无反查结果时退回码表编码。连续解码用独立词目索引决定是否挂 `aux_code`：词组即使按单字输入也可提示，没有独立词目的自动整句不挂码；普通形码查询与旧混输的形码候选同样挂字词提示。`Candidate.text` 保持纯中文，译文请求和上屏不拼接提示。

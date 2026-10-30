@@ -1,5 +1,6 @@
 //! 形码（五笔）：编码直接查码表，不走拼音的切分与整句。
 
+mod hints;
 mod keys;
 mod sentence;
 
