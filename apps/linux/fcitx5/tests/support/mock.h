@@ -1,6 +1,7 @@
 //! 可控 Server 夹具，只模拟返回帧，记录插件发送的框架事实。
 #pragma once
 #include "wire.h"
+#include "../../../protocol_version.h"
 #include <cstring>
 #include <filesystem>
 #include <thread>
@@ -45,7 +46,7 @@ struct Mock {
         int fd = accept(listener, nullptr, nullptr);
         auto opened = readMessage(fd).at("OpenSession");
         const auto session = opened.at("session");
-        assert(opened.at("protocol") == 9);
+        assert(opened.at("protocol") == qingjian::PROTOCOL_VERSION);
         writeMessage(fd, {{"Update", {{"session", session}, {"linux_ui", {{"version", mode == "mismatch" ? 2 : 3}}}}}});
         if (mode == "mismatch") { close(fd); return; }
         auto identity = readMessage(fd).at("LinuxHello");

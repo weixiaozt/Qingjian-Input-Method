@@ -2,6 +2,7 @@
 #include "qingjian.h"
 #include "support/input.h"
 #include "support/wire.h"
+#include "../../protocol_version.h"
 #include <fcitx/inputcontextmanager.h>
 #include <chrono>
 #include <cstring>
@@ -25,7 +26,7 @@ int main(int argc, char **argv) {
         int connection = accept(listener, nullptr, nullptr);
         auto opened = readMessage(connection).at("OpenSession");
         const auto session = opened.at("session");
-        assert(opened.at("protocol") == 9);
+        assert(opened.at("protocol") == qingjian::PROTOCOL_VERSION);
         writeMessage(connection, {{"Update", {{"session", session}, {"linux_ui", {{"version", failure == "old-version" ? 2 : 3}}}}}});
         if (failure != "old-version") {
             auto identity = readMessage(connection).at("LinuxHello");
