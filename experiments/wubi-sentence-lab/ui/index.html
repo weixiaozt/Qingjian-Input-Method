@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>五笔整句 · 实验台</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
+<body><main>
+<header><div><div class="eyebrow">QINGJIAN / INPUT LAB 01</div><h1>五笔，连成一句。</h1><p>连续打编码，让输入法寻找字词边界。</p></div><span class="badge">独立实验版 · 0.1</span></header>
+<div class="boundary">只在这个页面里实验，当前青简保持原样。<strong>请切到英文输入状态，再输入五笔编码。</strong></div>
+<div class="layout"><section class="workspace">
+<div class="sectionline"><h2>01 / 输入编码</h2><span id="latency">本地解码</span></div>
+<label class="sr" for="codes">连续五笔编码</label><input id="codes" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="96" placeholder="例如 wqjywyg" autofocus>
+<div class="under"><span id="count">0 / 96</span><span>短按空格：中文　长按 350ms：双语　↑↓：换候选</span></div>
+<div class="examples"><span>试一试</span><button data-example="wqjywyg">你是谁</button><button data-example="wygdghtfdghkgawf">今天下午三点开会</button><button id="reset">清空编码</button></div>
+<div id="locked" class="lockbar" hidden><span id="lockedText"></span><button id="unlock">解除锁定</button></div>
+<div class="sectionline resultline"><h2>02 / 整句候选</h2><span id="status" role="status">等待输入</span></div>
+<div id="candidates" class="candidates"><div class="empty">在上方输入一串五笔编码。<br>这里会显示候选句子和自动切分。</div></div>
+<div class="segbox" id="segmentsBox" hidden><div class="smalltitle">当前切分 <span>点击字词可固定到这里，再继续输入</span></div><div id="segments"></div></div>
+<div class="translation"><div class="sectionline"><h2>03 / 自动英译</h2><label class="switch"><input id="autoTranslate" type="checkbox" checked> 自动翻译</label></div><p id="english">确定中文候选后，本地模型会自动翻译。</p><div class="translationfoot"><span id="translationStatus">TranslateGemma 4B · 本机</span><button id="retry">重新翻译</button></div></div>
+<div class="actions"><button id="commitChinese" class="secondary">上屏中文</button><button id="commitBilingual" class="primary">上屏双语</button><span id="holdStatus" role="status"></span></div>
+</section>
+<aside><section class="paper"><div class="sectionline"><h2>模拟输入框</h2><button id="clearOutput">清空</button></div><p class="hint">确认的文字只进入这里，不会发到其他软件。</p><label class="sr" for="output">模拟上屏结果</label><textarea id="output" placeholder="短按或长按空格，观察这里的结果。"></textarea><button id="copy">复制结果</button><span id="copyStatus" role="status"></span></section>
+<section class="feedback"><h2>这次没识别对？</h2><p>记下你想打的句子，留给下一轮改进。</p><label class="sr" for="expected">期望的中文句子</label><input id="expected" placeholder="你原本想输入什么？" maxlength="256"><button id="saveFeedback">保存这条反馈</button><div id="feedbackStatus" role="status"></div></section>
+<section class="notes"><h2>这版在验证什么</h2><ul><li>简码与四码词组混合输入。</li><li>自动分隔、整句排序和前词纠错。</li><li>中文确认与本地双语输出。</li></ul><p>这是有界候选搜索，首选可能不准；人名、生僻词和长句尤其需要换候选。末尾编码未完成时不会确认。</p></section></aside></div>
+<footer><span>本地码表 + 词频语言模型 · 不注册系统输入法</span><button id="quit">关闭实验服务</button></footer>
+</main></body></html>

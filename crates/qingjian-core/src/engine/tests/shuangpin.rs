@@ -1,0 +1,258 @@
+//! 双拼。
+
+use super::*;
+
+#[test]
+fn shuangpin_decodes_keys_before_lookup_and_shows_full_pinyin() {
+    let mut engine = xiaohe();
+    engine.set_input("kdfa");
+    let query = engine.query().unwrap();
+    assert_eq!(query.candidates.items[0].text, "开发");
+    assert_eq!(query.marked_text(), "kai'fa");
+    assert_eq!(query.marked_cursor(), 6);
+    assert_eq!(query.text, "kdfa");
+    assert!(query.decoded_keys);
+    // 末尾落单的键是声母前缀：`kdf` = kai f…
+    engine.set_input("kdf");
+    let query = engine.query().unwrap();
+    assert_eq!(query.marked_text(), "kai'f");
+    assert_eq!(query.candidates.items[0].text, "开放");
+    // 配不出音节的键原样留作尾巴
+    engine.set_input("kdfl");
+    let query = engine.query().unwrap();
+    assert_eq!(query.marked_text(), "kai'fl");
+    assert_eq!(query.tail, "fl");
+    assert_eq!(query.candidates.items[0].text, "开");
+}
+
+#[test]
+fn shuangpin_shows_raw_keys_in_preedit_and_decoded_pinyin_in_segments() {
+    let mut engine = xiaohe();
+    engine.set_shuangpin_raw_preedit(true);
+    engine.set_input("kdfa");
+    let query = engine.query().unwrap();
+    assert_eq!(query.candidates.items[0].text, "开发");
+    // 输入框内 marked_text 显示原始输入按键
+    assert_eq!(query.marked_text(), "kdfa");
+    assert_eq!(query.marked_cursor(), 4);
+    assert_eq!(query.text, "kdfa");
+    // 候选窗口顶部拼音行保持显示解码全拼
+    let segments_text: String = query
+        .marked_segments()
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect();
+    assert_eq!(segments_text, "kai'fa");
+    assert_eq!(query.segments_cursor(), 6);
+
+    // 移动光标到中间 kd|fa
+    engine.move_cursor_left();
+    engine.move_cursor_left();
+    let query = engine.query().unwrap();
+    assert_eq!(query.marked_text(), "kdfa");
+    assert_eq!(query.marked_cursor(), 2);
+    let segments_text: String = query
+        .marked_segments()
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect();
+    assert_eq!(segments_text, "kai'fa");
+    assert_eq!(query.segments_cursor(), 3);
+
+    // k|dfa：光标后的剩余段保留原始按键，和敲的对得上（双拼光标插进音节中间，单独解码会错开）
+    engine.move_cursor_left();
+    let query = engine.query().unwrap();
+    assert_eq!(query.marked_text(), "kdfa");
+    assert_eq!(query.marked_cursor(), 1);
+    let segments_text: String = query
+        .marked_segments()
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect();
+    assert_eq!(segments_text, "k'dfa");
+}
+
+/// 两个开关各管一处：输入框按 `shuangpin_raw_preedit`，候选窗口的拼音行按 `shuangpin_raw_window`。
+#[test]
+fn shuangpin_window_and_preedit_switch_independently() {
+    let window = |query: &Query| {
+        let (segments, cursor) = query.window_segments(None);
+        let text: String = segments.iter().map(|s| s.text.as_str()).collect();
+        (text, cursor)
+    };
+    let mut engine = xiaohe();
+    engine.set_input("kdfa");
+    for (raw_preedit, raw_window, marked, line) in [
+        (false, false, "kai'fa", ("kai'fa", 6)),
+        (true, true, "kdfa", ("kdfa", 4)),
+        (false, true, "kai'fa", ("kdfa", 4)),
+        (true, false, "kdfa", ("kai'fa", 6)),
+    ] {
+        engine.set_shuangpin_raw_preedit(raw_preedit);
+        engine.set_shuangpin_raw_window(raw_window);
+        let query = engine.query().unwrap();
+        assert_eq!(query.marked_text(), marked, "{raw_preedit} {raw_window}");
+        assert_eq!(
+            window(&query),
+            (line.0.to_owned(), line.1),
+            "{raw_preedit} {raw_window}"
+        );
+    }
+
+    // kd|fa：光标前后的键分两段，光标后的那段按 Rest 画
+    engine.set_shuangpin_raw_window(true);
+    engine.move_cursor_left();
+    engine.move_cursor_left();
+    let query = engine.query().unwrap();
+    let (segments, cursor) = query.window_segments(None);
+    let kinds: Vec<(&str, MarkedKind)> =
+        segments.iter().map(|s| (s.text.as_str(), s.kind)).collect();
+    assert_eq!(kinds, [("kd", MarkedKind::Typed), ("fa", MarkedKind::Rest)]);
+    assert_eq!(cursor, 2);
+
+    // 全拼不受影响
+    let mut engine = super::engine();
+    engine.set_shuangpin_raw_window(true);
+    engine.set_input("kaifa");
+    assert_eq!(window(&engine.query().unwrap()).0, "kai'fa");
+}
+
+#[test]
+fn shuangpin_commit_consumes_keys_per_syllable() {
+    let mut engine = xiaohe();
+    engine.set_input("kdfave");
+    let query = engine.query().unwrap();
+    let kaifa = query
+        .candidates
+        .items
+        .iter()
+        .find(|c| c.text == "开发")
+        .cloned()
+        .unwrap();
+    engine.commit(&kaifa);
+    assert_eq!(engine.composition().text(), "ve");
+    assert_eq!(engine.query().unwrap().marked_text(), "开发zhe");
+    // 未打完的最后一个键也被候选吃掉
+    engine.set_input("kdf");
+    let kaifang = engine.query().unwrap().candidates.items[0].clone();
+    engine.commit(&kaifang);
+    assert!(engine.composition().is_empty());
+}
+
+#[test]
+fn shuangpin_records_choices_by_full_pinyin() {
+    let mut engine = xiaohe();
+    engine.set_input("kdfa");
+    let query = engine.query().unwrap();
+    // 两键定局：`fa` 不再按前缀放宽成 fan / fang
+    assert!(query.candidates.items.iter().all(|c| c.text != "开饭"));
+    let kaifa = query.candidates.items[0].clone();
+    assert_eq!(kaifa.text, "开发");
+    engine.commit(&kaifa);
+    // 学习记的是全拼 kaifa：切回全拼、同样的拼音也受益
+    assert!(engine.recent_commits.last().unwrap().same_input("kaifa"));
+}
+
+#[test]
+fn shuangpin_moves_mode_keys_to_shifted_letters() {
+    let mut engine = xiaohe();
+    engine.set_input("v");
+    assert!(!engine.expression_mode());
+    assert_eq!(engine.query().unwrap().marked_text(), "zh");
+    engine.set_input("u1");
+    assert!(!engine.question_mode());
+    // Shift+V / Shift+U 进模式，之后与全拼下的 v / u 一样
+    assert!(engine.takes_mode_letter('V') && engine.takes_mode_letter('U'));
+    assert!(!engine.takes_mode_letter('v') && !engine.takes_mode_letter('I'));
+    engine.set_input("V1+2");
+    assert!(engine.expression_mode() && !engine.raw_mode());
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "3");
+    engine.set_input("U4e00");
+    assert!(engine.question_mode() && engine.unicode_entry());
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "一");
+    engine.set_input("Unihc");
+    assert!(engine.question_mode());
+    assert_eq!(engine.query().unwrap().marked_text(), "Uni'hao");
+    // 全拼下大写字母不是入口
+    let mut full = super::engine();
+    assert!(!full.takes_mode_letter('V'));
+    full.set_input("V1+2");
+    assert!(!full.expression_mode());
+    // `?` 入口开着时照常进问字（缺省关）
+    engine.set_input("?nihc");
+    assert!(!engine.question_mode());
+    engine.set_mode_keys(ModeKeys {
+        question_mark: true,
+        ..ModeKeys::default()
+    });
+    engine.set_input("?nihc");
+    assert!(engine.question_mode());
+    assert_eq!(engine.query().unwrap().marked_text(), "?ni'hao");
+}
+
+#[test]
+fn microsoft_semicolon_is_a_final_only_after_a_lone_initial() {
+    let mut engine = engine();
+    engine.set_shuangpin(Some(Scheme::Microsoft));
+    engine.set_input("x");
+    assert!(engine.takes_semicolon());
+    engine.push(';');
+    assert!(!engine.takes_semicolon());
+    assert!(!engine.raw_mode());
+    assert_eq!(engine.query().unwrap().marked_text(), "xing");
+    // 问字模式里也认：`?x;` 问的是 xing
+    engine.set_mode_keys(ModeKeys {
+        question_mark: true,
+        ..ModeKeys::default()
+    });
+    engine.set_input("?x");
+    assert!(engine.takes_semicolon());
+    engine.push(';');
+    assert!(engine.question_mode());
+    assert_eq!(engine.query().unwrap().marked_text(), "?xing");
+    engine.set_shuangpin(Some(Scheme::Xiaohe));
+    engine.set_input("x");
+    assert!(!engine.takes_semicolon());
+}
+
+#[test]
+fn shuangpin_raw_commit_does_not_learn_decodable_keys_as_english() {
+    let mut engine = xiaohe();
+    engine.set_input("nihc");
+    assert!(!looks_like_english_word_in(&engine));
+    engine.set_input("gist");
+    assert!(looks_like_english_word_in(&engine));
+}
+
+#[test]
+fn unmatched_keys_get_abbreviated_candidates() {
+    // 拼音加加：`im` / `zm` 配不出任何音节，按每键一个声母读 → 什么 / 怎么
+    let dictionary =
+        Dictionary::parse("什么\tshen me\t9000\n怎么\tzen me\t8000\n说明\tshuo ming\t500\n")
+            .unwrap();
+    let mut engine = Engine::new(dictionary);
+    engine.set_shuangpin(Some(Scheme::Jiajia));
+    engine.set_input("im");
+    assert_eq!(texts_of(&engine)[0], "什么");
+    engine.set_input("zm");
+    assert_eq!(texts_of(&engine)[0], "怎么");
+}
+
+#[test]
+fn pending_key_that_spells_a_whole_word_keeps_english_out_of_first() {
+    // 拼音加加：`veg` = zhe g…（末尾落单的一键），词级已有「这个」逐音节对上全部输入
+    let word_of = |dict: &str| {
+        let mut engine = Engine::new(Dictionary::parse(dict).unwrap())
+            .with_english(WordList::parse("veg\tveg\t500\n").unwrap());
+        engine.set_shuangpin(Some(Scheme::Jiajia));
+        engine.set_input("veg");
+        texts_of(&engine)
+    };
+    let whole = word_of("这个\tzhe ge\t9000\n");
+    assert_eq!(whole[0], "这个", "{whole:?}");
+    // 英文词还在，只是让到后面：空格不会再把它整串上屏
+    assert!(whole.iter().any(|text| text == "veg"), "{whole:?}");
+    // 只有单字、没有整词覆盖全部音节时不改：那串更像在打英文
+    let single = word_of("遮\tzhe\t9000\n歌\tge\t8000\n");
+    assert_eq!(single[0], "veg", "{single:?}");
+}

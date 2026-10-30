@@ -1,0 +1,5 @@
+name = "五笔86整句测试"
+author = "极点五笔 / 本地实验"
+version = "0.1"
+description = "连续编码整句测试码表，须打开五笔连续整句开关"
+license = "Apache-2.0"

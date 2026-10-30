@@ -1,0 +1,12 @@
+/target/
+/data/
+/打开实验台.url
+/运行状态.json
+/实验反馈.jsonl
+/启动错误.txt
+/评测结果.json
+/验证记录.json
+/manifest.json
+/*.exe
+/*.zip
+__pycache__/

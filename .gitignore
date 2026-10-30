@@ -1,0 +1,19 @@
+/target
+**/*.rs.bk
+.DS_Store
+*.app
+.env
+/logs
+/data
+.playwright-mcp/
+__pycache__/
+
+# Local build and deployment artifacts
+/outputs/
+/work/
+*.pdb
+*.msi
+*.msix
+*.pem
+*.pfx
+*.key

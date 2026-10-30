@@ -1,0 +1,34 @@
+name: wubi-lab
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/wubi-sentence-lab/**'
+      - 'crates/**'
+      - '.github/workflows/wubi-lab.yml'
+  pull_request:
+    paths:
+      - 'experiments/wubi-sentence-lab/**'
+      - 'crates/**'
+      - '.github/workflows/wubi-lab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: experiments/wubi-sentence-lab
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: 1.96.0
+          components: rustfmt, clippy
+      - run: cargo fmt -- --check
+      - run: cargo test --locked
+      - run: cargo clippy --locked --all-targets -- -D warnings
