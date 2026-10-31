@@ -3,6 +3,24 @@ use super::super::engine;
 use crate::{CodeScheme, Engine};
 use qingjian_dictionary::CodeTable;
 const TABLE: &str = "你\twq\t100\n是\tj\t100\n谁\tywyg\t100\n今天\twygd\t100\n下午\tghtf\t100\n三点\tdghk\t100\n开会\tgawf\t100\n";
+
+#[test]
+fn explicit_raw_commit_allows_letters_but_implicit_commit_still_discards() {
+    let mut e = input();
+    for word in ["hello", "wqjywyg"] {
+        for c in word.chars() {
+            e.push(c);
+        }
+        assert_eq!(e.take_raw_explicit(), word);
+        assert!(e.composition().is_empty());
+        assert!(!e.english_mode());
+        for c in word.chars() {
+            e.push(c);
+        }
+        assert_eq!(e.take_raw(), "");
+        assert!(e.composition().is_empty());
+    }
+}
 fn input() -> Engine {
     let mut e = engine();
     let mut scheme = CodeScheme::new("wubi", CodeTable::parse(TABLE).unwrap());

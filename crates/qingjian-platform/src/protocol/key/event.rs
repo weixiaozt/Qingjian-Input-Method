@@ -8,7 +8,7 @@ pub struct KeyEvent {
     /// Windows 虚拟键码（`VK_*`）。翻页、方向键、退格、回车等靠它区分。
     pub virtual_key: u32,
 
-    /// 空格松开事件；旧端缺省为按下。
+    /// 松开事件；Windows发送空格释放或已确认的Shift单击，旧端缺省为按下。
     #[serde(default)]
     pub released: bool,
 

@@ -270,6 +270,9 @@ impl TextService_Impl {
     /// 组句中才真有东西要落定（`commit_pending` 自己会判），没在组句时这条是空转。
     pub(super) fn set_focus(&self, foreground: bool) {
         if !foreground {
+            self.key_tap.cancel();
+        }
+        if !foreground {
             self.reset_scheme_hold();
             self.space_owned.set(false);
             self.space_context.borrow_mut().take();

@@ -734,3 +734,7 @@ Core AutoCommit同时返回文本和中文末尾的UTF-16偏移。Windows协议1
 ### 右Ctrl长按方案切换
 
 协议13增加ToggleInputScheme命令及InputSettings长按时长，旧Server默认不启用。TSF按VK_RCONTROL或扩展VK_CONTROL识别右键，松开时判定单独长按；重复回调不重置时间，键盘组合、同线程鼠标点击/滚轮、失焦/停用取消。短期WH_MOUSE只观察本输入线程，始终传给后续钩子。Server再次检查输入/翻译/面板/待提交文本，忙时不改变状态。空闲时原子写general.scheme/code及wubi_sentence开关，立即装配全拼或五笔86整句，保留其他配置，记住全局方案并回到中文模式。
+
+## Windows Shift 原样提交（2026-10-31）
+
+TSF 仅在单击 Shift 已确认、中文组句且原上下文仍有焦点时，发送 released=true 的 Shift KeyEvent；空闲时保留中英切换，组合键不发送该确认。Server 在空格释放分派前识别此意图，调用 Engine::take_raw_explicit 并取消候选翻译与待提交状态。take_raw 原有五笔整句丢弃规则保留，失焦不交出编码。协议消息结构未变；旧 DLL 保持原行为，需重开应用加载新版。回归覆盖拼音/五笔/空码原文、后续中文、晚到译文和会话隔离。

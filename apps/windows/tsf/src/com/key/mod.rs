@@ -6,6 +6,7 @@ pub(crate) mod hold;
 mod layout;
 mod mouse_guard;
 pub(crate) mod preserved;
+pub(crate) mod raw_commit;
 mod tap;
 pub(crate) use hold::SchemeHold;
 pub(crate) use mouse_guard::SchemeMouseGuard;

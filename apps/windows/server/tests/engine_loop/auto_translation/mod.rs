@@ -10,6 +10,7 @@ use std::time::Duration;
 
 mod caret;
 mod provider;
+mod raw_shift;
 mod state;
 mod wubi;
 use provider::{Provider, State};

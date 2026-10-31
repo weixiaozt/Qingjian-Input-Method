@@ -386,6 +386,12 @@ impl Engine {
             self.chain.reset();
             return String::new();
         }
+        self.take_raw_explicit()
+    }
+
+    /// 用户明确要求上屏原始输入；形码整句也允许交出字母，不能用于失焦或普通模式切换。
+    pub fn take_raw_explicit(&mut self) -> String {
+        self.clear_auto_translation();
         // 回车原样上屏拼音段：码段（没上屏的码）到此结束
         self.aux_code = None;
         // 纠错生效时用户仍按了回车：这个串就是要原样打的，记下来以后不再纠它

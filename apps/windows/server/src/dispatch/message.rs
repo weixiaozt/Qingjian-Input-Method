@@ -154,6 +154,9 @@ impl Router {
         self.notice = None;
         self.flash_notice = None;
         self.candidates.close_menu();
+        if let Some(reply) = self.raw_shift_key(session, &event) {
+            return reply;
+        }
         if let Some(reply) = self.candidate_space_key(session, &event) {
             return reply;
         }

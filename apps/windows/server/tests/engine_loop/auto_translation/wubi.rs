@@ -9,7 +9,7 @@ use qingjian_dictionary::CodeTable;
 use qingjian_platform::{QuickTranslationConfig, Scheme};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-fn setup() -> (Router, Arc<Mutex<State>>) {
+pub(super) fn setup() -> (Router, Arc<Mutex<State>>) {
     let mut r = router_with(RouterConfig {
         scheme: Scheme::Off,
         quick_translation: QuickTranslationConfig {

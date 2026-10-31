@@ -84,7 +84,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             self.reset_scheme_hold();
         }
         self.scheme_key_up(&pic, wparam.0 as u32, lparam);
-        self.note_key_up(wparam.0 as u32);
+        self.note_key_up(&pic, wparam.0 as u32);
         Ok((wparam.0 == 0x20 && self.space_owned.get()).into())
     }
 
@@ -93,7 +93,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             self.reset_scheme_hold();
         }
         self.scheme_key_up(&pic, wparam.0 as u32, lparam);
-        self.note_key_up(wparam.0 as u32);
+        self.note_key_up(&pic, wparam.0 as u32);
         if wparam.0 == 0x20 && self.space_owned.replace(false) {
             let original = self.space_context.borrow_mut().take();
             if !original.as_ref().is_some_and(|context| {
@@ -190,11 +190,28 @@ impl TextService_Impl {
             .key_down(vk, lparam, self.mode_state.switch_keys());
     }
 
-    fn note_key_up(&self, vk: u32) {
+    fn note_key_up(&self, pic: &Ref<ITfContext>, vk: u32) {
         if vk == u32::from(VK_CAPITAL.0) {
             self.mode_state.notify();
         }
         if self.key_tap.key_up(vk, self.mode_state.switch_keys()) {
+            if let Some(event) = crate::com::key::raw_commit::raw_shift_event(
+                vk,
+                self.shared.composing(),
+                self.mode_state.english(),
+            ) {
+                // 只向原组句上下文提交，切窗口后的Shift抬起不能带走字母。
+                let valid = self.shared.foreground()
+                    && !self.key_event(vk).modifiers.has_command_key()
+                    && self.shared.last_context().as_ref().is_some_and(|original| {
+                        pic.ok().is_ok_and(|current| current == original)
+                            && super::candidate_context_valid(original)
+                    });
+                if valid && let Ok(context) = pic.ok() {
+                    self.forward_key(context.into(), event);
+                }
+                return;
+            }
             self.set_english_mode(!self.mode_state.english());
         }
     }

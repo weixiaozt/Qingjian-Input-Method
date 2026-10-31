@@ -7,6 +7,7 @@ mod effect;
 mod input;
 mod menu;
 mod panel;
+mod raw_commit;
 mod shortcut;
 
 pub(super) use self::codes::{ESCAPE, RETURN};
