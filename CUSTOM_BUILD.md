@@ -1,5 +1,7 @@
 # 本仓库的定制开发
 
+本仓库的展示名称为“Windows 双语整句输入实验项目”，由 weixiaozt 维护定制修改，与上游作者及团队无隶属关系，不代表其发布或背书。来源、修改日期、许可及尚未替换的程序品牌标识见 [衍生项目说明](DERIVATIVE_NOTICE.md)。
+
 本仓库基于 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian) 的源码快照 `a1f1cdb80b1ea4d11e0f4583e01c418e39b209e4` 开发，保留上游许可证、署名与原有文档。当前是本地定制测试版本，不是上游官方发行版。
 
 ## 包含的功能
