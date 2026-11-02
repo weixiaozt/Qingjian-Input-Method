@@ -193,6 +193,7 @@ impl Engine {
             }
         };
         self.apply_retraction(&input, &candidate.text);
+        self.remember_exact_choice(candidate);
         self.recording.clear();
         for (typed, intended) in &typos {
             tracing::debug!(typed, intended, "记录敲错");

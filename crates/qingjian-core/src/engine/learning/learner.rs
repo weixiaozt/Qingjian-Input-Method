@@ -6,6 +6,13 @@ use crate::sentence::{Context, UserNgram};
 
 /// 用户词频学习。
 pub trait Learner: Send {
+    /// 同方案同编码最近一次明确选择，独立于累计次数。
+    fn remember_exact(&mut self, _key: &str, _candidate: &Candidate) {}
+
+    fn recent_exact(&self, _key: &str) -> Option<Candidate> {
+        None
+    }
+
     /// 用户上屏了某个候选。
     fn record(&mut self, candidate: &Candidate);
 

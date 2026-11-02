@@ -54,6 +54,16 @@ impl MutedLearner {
 }
 
 impl Learner for MutedLearner {
+    fn remember_exact(&mut self, key: &str, candidate: &Candidate) {
+        if !self.muted() {
+            self.inner.remember_exact(key, candidate);
+        }
+    }
+
+    fn recent_exact(&self, key: &str) -> Option<Candidate> {
+        self.inner.recent_exact(key)
+    }
+
     fn record(&mut self, candidate: &Candidate) {
         if !self.muted() {
             self.inner.record(candidate);

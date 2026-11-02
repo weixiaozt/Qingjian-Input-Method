@@ -1,6 +1,7 @@
 mod decay;
 mod demotions;
 mod learner_impl;
+mod recent;
 mod tables;
 
 use std::cell::Cell;
@@ -61,6 +62,10 @@ const RAW_MARK: &str = "<raw>";
 /// （`COLD_DAYS`），落盘时才连侧车一起清出。不改「一次误选翻不过静态证据」的封顶设计。
 #[derive(Debug)]
 pub struct FrequencyLearner {
+    recent: BTreeMap<String, Candidate>,
+
+    recent_dirty: bool,
+
     /// 词 → 用户选择次数（带最近使用日）。
     counts: HashMap<String, Decay>,
 
@@ -123,6 +128,8 @@ pub struct FrequencyLearner {
 impl Default for FrequencyLearner {
     fn default() -> Self {
         Self {
+            recent: BTreeMap::new(),
+            recent_dirty: false,
             counts: HashMap::default(),
             half_life_days: DEFAULT_HALF_LIFE_DAYS,
             today: Cell::new(decay::today()),
@@ -258,12 +265,13 @@ impl FrequencyLearner {
             let skipped = learner.load_demoted(&source);
             note_skipped(&demoted_path, skipped);
         }
+        learner.load_recent(&path)?;
         learner.path = Some(path);
         Ok(learner)
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.dirty
+        self.dirty || self.recent_dirty
     }
 
     /// 词频文件 `frequency_path` 与它同目录的各张表、侧车文件：清空或导出学习数据时按这份清单。
@@ -279,6 +287,7 @@ impl FrequencyLearner {
             Self::typos_path(frequency_path),
             Self::typos_days_path(frequency_path),
             Self::demoted_path(frequency_path),
+            Self::recent_path(frequency_path),
         ]
     }
 

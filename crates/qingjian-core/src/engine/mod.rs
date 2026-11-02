@@ -28,6 +28,7 @@ mod privacy;
 mod query;
 mod raw;
 mod reading;
+mod recent_choice;
 mod rescoring;
 mod session;
 mod setup;

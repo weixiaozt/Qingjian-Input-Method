@@ -738,3 +738,7 @@ Core AutoCommit同时返回文本和中文末尾的UTF-16偏移。Windows协议1
 ## Windows Shift 原样提交（2026-10-31）
 
 TSF 仅在单击 Shift 已确认、中文组句且原上下文仍有焦点时，发送 released=true 的 Shift KeyEvent；空闲时保留中英切换，组合键不发送该确认。Server 在空格释放分派前识别此意图，调用 Engine::take_raw_explicit 并取消候选翻译与待提交状态。take_raw 原有五笔整句丢弃规则保留，失焦不交出编码。协议消息结构未变；旧 DLL 保持原行为，需重开应用加载新版。回归覆盖拼音/五笔/空码原文、后续中文、晚到译文和会话隔离。
+
+## 相同编码的最近选择（2026-11-02）
+
+Core 的 recent_choice 按拼音开关、双拼布局、形码方案、整句开关及完整 scope 隔离键，在 commit_with 完成繁简还原及撤销学习后记录候选，在 query 的模型排序与整句裁剪之后优先放回。保留候选类型和音节供下一次正确消耗编码，译文不存入偏好；原有累计词频不改格式。FrequencyLearner 将最近选择保存为 user-recent-choices.jsonl，沿用周期刷新和会话关闭刷新，纳入学习数据清空/导出清单；MutedLearner 遵循隐私与学习开关。删除学习记录移除偏好，手动降权优先；重新选择取消该候选的降权。

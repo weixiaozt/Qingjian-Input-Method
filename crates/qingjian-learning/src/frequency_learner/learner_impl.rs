@@ -44,6 +44,14 @@ fn lookup_choice(choices: &HashMap<String, HashMap<String, u32>>, key: &str, tex
 }
 
 impl Learner for FrequencyLearner {
+    fn remember_exact(&mut self, key: &str, candidate: &Candidate) {
+        self.remember_recent(key, candidate);
+    }
+
+    fn recent_exact(&self, key: &str) -> Option<Candidate> {
+        self.recent.get(key).cloned()
+    }
+
     fn record(&mut self, candidate: &Candidate) {
         self.tick();
         let now = self.today.get();
@@ -208,7 +216,13 @@ impl Learner for FrequencyLearner {
     }
 
     fn forget(&mut self, text: &str) -> Forgotten {
-        let mut forgotten = Forgotten::default();
+        let recent_before = self.recent.len();
+        self.recent.retain(|_, candidate| candidate.text != text);
+        self.recent_dirty |= self.recent.len() != recent_before;
+        let mut forgotten = Forgotten {
+            learning: self.recent.len() != recent_before,
+            ..Default::default()
+        };
         if self.words.remove(text).is_some() {
             forgotten.user_word = true;
             self.words_dirty = true;
@@ -280,6 +294,11 @@ impl Learner for FrequencyLearner {
         let Some(path) = self.path.clone() else {
             return;
         };
+        if self.recent_dirty
+            && let Err(error) = self.save_recent(&path)
+        {
+            tracing::warn!(%error, "Failed to save recent exact choices");
+        }
         self.tick();
         if self.dirty {
             match self.save_to(&path) {

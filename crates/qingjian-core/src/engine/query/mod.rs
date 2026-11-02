@@ -66,6 +66,7 @@ impl Engine {
         }
         self.rerank_choices(&mut query.candidates.items);
         trim_sentence_alternates(&mut query.candidates.items);
+        self.prioritize_exact_choice(&mut query.candidates.items);
         query.spelled = result::spelling_for(&query.segmentations, query.candidates.items.first());
         // 给输入日志留个摘要：上屏时才知道选了什么，这里才知道看到了什么
         // 九宫格没有切分，拼音取拼音行（首选读到的写法），云联想也用它问
